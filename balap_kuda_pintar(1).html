@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Balap Kuda Pintar - Mengenal Bilangan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #87CEEB; /* Sky blue */
+            overflow: hidden; /* Prevent scrolling on interactive boards */
+            touch-action: manipulation; /* Better touch handling */
+        }
+        h1, h2, h3, .brand-font {
+            font-family: 'Fredoka One', cursive;
+        }
+        
+        /* Custom UI Elements */
+        .btn-custom {
+            transition: transform 0.1s, box-shadow 0.1s;
+            box-shadow: 0 6px 0px rgba(0,0,0,0.2);
+        }
+        .btn-custom:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0px rgba(0,0,0,0.2);
+        }
+        
+        /* Track Styles */
+        .track-container {
+            background: repeating-linear-gradient(
+                90deg,
+                #6da03e,
+                #6da03e 50px,
+                #5b8a30 50px,
+                #5b8a30 100px
+            );
+            position: relative;
+            border: 4px solid #4a2e15;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .finish-line {
+            position: absolute;
+            right: 20px;
+            top: 0;
+            bottom: 0;
+            width: 40px;
+            background: repeating-linear-gradient(
+                0deg,
+                #fff,
+                #fff 10px,
+                #000 10px,
+                #000 20px
+            );
+            z-index: 10;
+        }
+        
+        .track-lane {
+            border-bottom: 2px dashed rgba(255,255,255,0.3);
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .track-lane:last-child {
+            border-bottom: none;
+        }
+        
+        /* Horse Styling (using CSS shapes/icons for better scaling) */
+        .horse-wrapper {
+            position: absolute;
+            left: 10px; /* Starting position */
+            transition: left 0.5s ease-in-out;
+            display: flex;
+            align-items: center;
+            z-index: 20;
+        }
+        
+        .horse-icon {
+            font-size: 2.5rem;
+            filter: drop-shadow(2px 4px 2px rgba(0,0,0,0.3));
+        }
+        
+        .horse-name-tag {
+            background-color: rgba(255,255,255,0.9);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-left: 5px;
+            white-space: nowrap;
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+        }
+
+        /* Animations */
+        @keyframes gallop {
+            0% { transform: translateY(0) rotate(0deg); }
+            25% { transform: translateY(-5px) rotate(-5deg); }
+            50% { transform: translateY(0) rotate(0deg); }
+            75% { transform: translateY(2px) rotate(5deg); }
+            100% { transform: translateY(0) rotate(0deg); }
+        }
+        
+        .galloping .horse-icon {
+            animation: gallop 0.4s infinite;
+        }
+        
+        @keyframes bounceIn {
+            0% { transform: scale(0.1); opacity: 0; }
+            60% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .bounce-in {
+            animation: bounceIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        
+        @keyframes pulse-border {
+            0% { border-color: rgba(255,255,255,0.5); }
+            50% { border-color: rgba(255,255,255,1); box-shadow: 0 0 15px rgba(255,255,255,0.8); }
+            100% { border-color: rgba(255,255,255,0.5); }
+        }
+        .active-player-highlight {
+            animation: pulse-border 1.5s infinite;
+            border: 4px solid white;
+            border-radius: 0.5rem;
+        }
+
+        /* Sun and Clouds */
+        .sun {
+            position: absolute;
+            top: 20px;
+            right: 40px;
+            color: #FFD700;
+            font-size: 4rem;
+            animation: spin 20s linear infinite;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        
+        .cloud {
+            position: absolute;
+            color: white;
+            opacity: 0.8;
+            font-size: 3rem;
+            animation: float 30s linear infinite;
+        }
+        @keyframes float {
+            0% { transform: translateX(-100px); }
+            100% { transform: translateX(100vw); }
+        }
+
+        /* Modal styling */
+        .modal-bg {
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+        }
+        
+        .question-card {
+            background-color: white;
+            background-image: radial-gradient(#f0f0f0 1px, transparent 1px);
+            background-size: 20px 20px;
+            border-radius: 20px;
+            border: 6px solid #ff9800;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col items-center justify-center relative select-none">
+
+    <div class="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
+        <i class="fas fa-sun sun"></i>
+        <i class="fas fa-cloud cloud" style="top: 10%; left: 10%; animation-duration: 25s; font-size: 4rem;"></i>
+        <i class="fas fa-cloud cloud" style="top: 30%; left: -20%; animation-duration: 35s; font-size: 3rem;"></i>
+        <i class="fas fa-cloud cloud" style="top: 15%; left: 50%; animation-duration: 28s; font-size: 5rem;"></i>
+        <div class="absolute bottom-0 w-full h-1/4 bg-green-500 rounded-t-[100px]" style="z-index:-1"></div>
+    </div>
+
+    <!-- HALAMAN LOGIN -->
+    <div id="login-screen" class="w-full max-w-2xl p-6 bg-white/90 rounded-3xl shadow-2xl border-4 border-blue-400 z-10 bounce-in">
+        <h1 class="text-4xl md:text-5xl text-center text-blue-600 mb-2 drop-shadow-md">🐎 Balap Kuda Pintar 🐎</h1>
+        <p class="text-center text-gray-600 mb-6 font-bold text-lg">Halaman Login Pemain</p>
+        
+        <div class="space-y-6 mb-8">
+            <div class="bg-blue-50 p-4 rounded-2xl border-2 border-blue-200">
+                <label class="block text-gray-700 font-bold mb-2">Nama Kelas (Opsional):</label>
+                <input type="text" id="class-name" placeholder="Misal: PAUD Bintang Kecil" class="w-full p-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 text-xl text-center">
+            </div>
+            
+            <div class="bg-purple-50 p-4 rounded-2xl border-2 border-purple-200">
+                <div class="flex justify-between items-center mb-4">
+                    <label class="text-gray-700 font-bold text-lg">Jumlah Pemain:</label>
+                    <div class="flex gap-2">
+                        <button onclick="adjustPlayers(-1)" class="w-10 h-10 bg-red-400 text-white rounded-full font-bold btn-custom text-xl">-</button>
+                        <span id="player-count-display" class="text-2xl font-bold w-6 text-center">1</span>
+                        <button onclick="adjustPlayers(1)" class="w-10 h-10 bg-green-400 text-white rounded-full font-bold btn-custom text-xl">+</button>
+                    </div>
+                </div>
+                <div id="player-inputs" class="space-y-3">
+                    <!-- Player inputs will be generated here -->
+                </div>
+                <p id="robot-notice" class="text-sm text-purple-600 mt-2 font-bold text-center">Kamu akan balapan melawan Robot Kuda! 🤖</p>
+            </div>
+        </div>
+
+        <div class="flex justify-center">
+            <button onclick="showSetup()" class="px-10 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-2xl rounded-full font-bold btn-custom brand-font hover:from-blue-600 hover:to-indigo-700 border-4 border-white shadow-xl">
+                Lanjut Pengaturan <i class="fas fa-arrow-right ml-2"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- HALAMAN PENGATURAN -->
+    <div id="setup-screen" class="hidden w-full max-w-2xl p-6 bg-white/90 rounded-3xl shadow-2xl border-4 border-green-400 z-10 bounce-in">
+        <h2 class="text-4xl text-center text-green-600 mb-2 drop-shadow-md brand-font">Pengaturan Game</h2>
+        <p class="text-center text-gray-600 mb-6 font-bold text-lg">Pilih Tingkat Kesulitan</p>
+        
+        <div class="flex flex-col gap-4 mb-8">
+            <button onclick="setDifficulty('easy')" id="btn-diff-easy" class="py-4 bg-green-400 hover:bg-green-500 text-white rounded-2xl font-bold btn-custom ring-4 ring-green-200 text-2xl">Mudah (Angka 1-10)</button>
+            <button onclick="setDifficulty('medium')" id="btn-diff-medium" class="py-4 bg-yellow-400 hover:bg-yellow-500 text-white rounded-2xl font-bold btn-custom text-2xl">Sedang (Angka 1-20)</button>
+            <button onclick="setDifficulty('hard')" id="btn-diff-hard" class="py-4 bg-red-400 hover:bg-red-500 text-white rounded-2xl font-bold btn-custom text-2xl">Sulit (Angka 1-50)</button>
+        </div>
+
+        <div class="flex gap-4 justify-center">
+             <button onclick="backToLogin()" class="px-6 py-4 bg-gray-400 text-white text-xl rounded-full font-bold btn-custom border-4 border-white shadow-xl">
+                <i class="fas fa-arrow-left"></i> Kembali
+            </button>
+            <button onclick="startGame()" class="px-10 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-2xl rounded-full font-bold btn-custom brand-font border-4 border-white shadow-xl">
+                MULAI BALAPAN! 🏁
+            </button>
+        </div>
+    </div>
+
+    <div id="game-screen" class="hidden w-full h-full max-w-6xl p-4 flex flex-col z-10 relative">
+        <!-- Header -->
+        <div class="flex justify-between items-center bg-white/80 p-3 rounded-2xl shadow-md mb-2 border-2 border-white backdrop-blur-sm">
+            <div>
+                <h1 class="text-2xl text-blue-700 m-0 leading-tight">Balap Kuda Pintar</h1>
+                <span id="display-class-name" class="text-sm font-bold text-gray-500"></span>
+            </div>
+            
+            <div id="current-turn-indicator" class="bg-yellow-300 px-6 py-2 rounded-full font-bold text-xl text-yellow-900 border-2 border-yellow-500 shadow-sm flex items-center gap-2">
+                <i class="fas fa-star text-yellow-600"></i> Giliran: <span id="turn-player-name" class="brand-font ml-1">Pemain 1</span>
+            </div>
+
+            <button onclick="returnToSetup()" class="bg-red-400 text-white px-4 py-2 rounded-xl font-bold btn-custom">
+                <i class="fas fa-sign-out-alt"></i> Keluar
+            </button>
+        </div>
+
+        <!-- The Track -->
+        <div class="flex-grow track-container shadow-inner mb-4 flex flex-col relative" id="race-track">
+            <div class="finish-line"></div>
+            <!-- Lanes will be generated here -->
+        </div>
+
+        <!-- Action Area (Question Button) -->
+        <div class="bg-white/90 p-4 rounded-3xl shadow-xl border-4 border-yellow-400 flex flex-col items-center justify-center">
+             <button id="roll-dice-btn" onclick="showQuestion()" class="px-10 py-5 bg-gradient-to-b from-yellow-300 to-orange-500 text-white text-3xl md:text-4xl rounded-2xl font-bold btn-custom brand-font border-4 border-white shadow-[0_8px_0_#b45309] hover:mt-[2px] hover:shadow-[0_6px_0_#b45309] active:mt-[8px] active:shadow-none w-full max-w-lg transition-all flex items-center justify-center gap-4">
+                <i class="fas fa-question-circle text-4xl"></i> AMBIL PERTANYAAN
+            </button>
+            <p class="mt-2 text-gray-600 font-bold">Jawab benar untuk maju!</p>
+        </div>
+    </div>
+
+    <div id="question-modal" class="fixed inset-0 modal-bg z-50 hidden flex items-center justify-center p-4">
+        <div class="question-card w-full max-w-2xl p-6 md:p-10 flex flex-col items-center relative bounce-in">
+            <div id="question-player-color" class="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 px-6 py-2 rounded-full text-white font-bold text-xl border-4 border-white shadow-md">
+                Giliran: Pemain
+            </div>
+            
+            <button onclick="replayVoice()" class="absolute top-4 right-4 bg-blue-100 text-blue-600 w-12 h-12 rounded-full flex items-center justify-center text-2xl border-2 border-blue-300 hover:bg-blue-200 transition-colors" title="Putar Suara Ulang">
+                <i class="fas fa-volume-up"></i>
+            </button>
+            
+            <div class="text-center mb-8 w-full mt-4">
+                <h3 id="question-text" class="text-3xl md:text-4xl text-gray-800 leading-snug mb-4">Pertanyaan akan muncul disini</h3>
+                <div id="question-visuals" class="flex flex-wrap justify-center gap-3 text-4xl md:text-5xl min-h-[80px]">
+                    <!-- Visual representations (apples, stars, etc) -->
+                </div>
+            </div>
+
+            <div id="answer-options" class="grid grid-cols-2 gap-4 w-full">
+                <!-- Answer buttons generated here -->
+            </div>
+            
+            <div id="feedback-container" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-white/95 rounded-[14px] z-10">
+                <div id="feedback-icon" class="text-8xl mb-4"></div>
+                <h2 id="feedback-text" class="text-4xl brand-font"></h2>
+            </div>
+        </div>
+    </div>
+
+    <div id="winner-modal" class="fixed inset-0 modal-bg z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-10 flex flex-col items-center relative bounce-in border-8 border-yellow-400 max-w-lg w-full text-center">
+            
+            <div class="absolute -top-16 left-1/2 transform -translate-x-1/2 text-8xl">
+                🏆
+            </div>
+            
+            <h2 class="text-4xl text-gray-800 mt-8 mb-2">Selamat!</h2>
+            <h1 id="winner-name" class="text-5xl text-blue-600 mb-6 drop-shadow-md">Nama Pemain</h1>
+            <p class="text-xl text-gray-600 mb-8 font-bold">Kuda kamu menang balapan!</p>
+            
+            <div class="flex gap-4">
+                <button onclick="resetGame()" class="px-6 py-3 bg-blue-500 text-white rounded-xl font-bold btn-custom text-xl">
+                    Main Lagi
+                </button>
+                <button onclick="returnToSetup()" class="px-6 py-3 bg-gray-500 text-white rounded-xl font-bold btn-custom text-xl">
+                    Menu Utama
+                </button>
+            </div>
+            
+            <!-- Confetti container -->
+            <div id="confetti-container" class="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl"></div>
+        </div>
+    </div>
+
+
+    <script>
+        // --- State Variables ---
+        let difficulty = 'easy';
+        let numPlayers = 1; // Default ke 1 untuk menampilkan Robot Kuda
+        let players = [];
+        let currentPlayerIndex = 0;
+        let gameActive = false;
+        let hasRobot = false;
+        let lastSpokenText = "";
+        
+        // Track settings
+        const trackLength = 100; // Total distance represented as percentage
+        const stepsToWin = { easy: 5, medium: 8, hard: 12 }; // How many correct answers to win
+        let currentStepsToWin = 5;
+        let stepSize = 0; // Calculated when game starts
+
+        // Player Colors
+        const playerColors = [
+            { bg: '#ef4444', text: 'white', hex: 'text-red-500' },    // Red
+            { bg: '#3b82f6', text: 'white', hex: 'text-blue-500' },   // Blue
+            { bg: '#10b981', text: 'white', hex: 'text-green-500' },  // Green
+            { bg: '#f59e0b', text: 'white', hex: 'text-yellow-500' }  // Yellow
+        ];
+
+        // --- Sound Setup (Tone.js) ---
+        let isAudioInitialized = false;
+        const synths = {};
+
+        function initAudio() {
+            if (isAudioInitialized) return;
+            try {
+                synths.correct = new Tone.Synth().toDestination();
+                synths.wrong = new Tone.FMSynth().toDestination();
+                synths.click = new Tone.MembraneSynth().toDestination();
+                synths.win = new Tone.PolySynth().toDestination();
+                synths.gallop = new Tone.NoiseSynth({
+                    noise: { type: 'pink' },
+                    envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0 }
+                }).toDestination();
+                isAudioInitialized = true;
+            } catch (e) {
+                console.log("Audio initialization failed. Requires user interaction first.", e);
+            }
+        }
+
+        function playSound(type) {
+            if (!isAudioInitialized) initAudio();
+            if (!isAudioInitialized || Tone.context.state !== 'running') return;
+
+            const now = Tone.now();
+            switch (type) {
+                case 'click':
+                    synths.click.triggerAttackRelease("C2", "32n");
+                    break;
+                case 'correct':
+                    synths.correct.triggerAttackRelease("C5", "8n", now);
+                    synths.correct.triggerAttackRelease("E5", "8n", now + 0.1);
+                    synths.correct.triggerAttackRelease("G5", "8n", now + 0.2);
+                    synths.correct.triggerAttackRelease("C6", "4n", now + 0.3);
+                    break;
+                case 'wrong':
+                    synths.wrong.triggerAttackRelease("C3", "4n");
+                    break;
+                case 'gallop':
+                     synths.gallop.triggerAttackRelease("16n");
+                    break;
+                case 'win':
+                    synths.win.triggerAttackRelease(["C4", "E4", "G4", "C5"], "2n", now);
+                    synths.win.triggerAttackRelease(["F4", "A4", "C5", "F5"], "2n", now + 0.5);
+                    synths.win.triggerAttackRelease(["G4", "B4", "D5", "G5"], "2n", now + 1);
+                    synths.win.triggerAttackRelease(["C4", "E4", "G4", "C5", "E5"], "1n", now + 1.5);
+                    break;
+            }
+        }
+
+        // --- DOM Elements ---
+        const screens = {
+            login: document.getElementById('login-screen'),
+            setup: document.getElementById('setup-screen'),
+            game: document.getElementById('game-screen')
+        };
+        const modals = {
+            question: document.getElementById('question-modal'),
+            winner: document.getElementById('winner-modal')
+        };
+
+        // --- Fitur Suara (Text-to-Speech) ---
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'id-ID';
+                utterance.rate = 0.85; // Sedikit lambat agar anak mudah mengerti
+                utterance.pitch = 1.1; 
+                window.speechSynthesis.speak(utterance);
+                lastSpokenText = text;
+            }
+        }
+
+        function replayVoice() {
+            playSound('click');
+            if(lastSpokenText) speak(lastSpokenText);
+        }
+
+        // --- STREAMING_CHUNK:Setup Logic ---
+
+        function initSetup() {
+            updatePlayerInputs();
+            setDifficulty('easy');
+        }
+
+        function showSetup() {
+            playSound('click');
+            screens.login.classList.add('hidden');
+            screens.setup.classList.remove('hidden');
+        }
+
+        function backToLogin() {
+            playSound('click');
+            screens.setup.classList.add('hidden');
+            screens.login.classList.remove('hidden');
+        }
+
+        function setDifficulty(level) {
+            playSound('click');
+            difficulty = level;
+            currentStepsToWin = stepsToWin[level];
+            
+            // UI Update
+            ['easy', 'medium', 'hard'].forEach(l => {
+                const btn = document.getElementById(`btn-diff-${l}`);
+                btn.classList.remove('ring-4', 'ring-green-200', 'ring-yellow-200', 'ring-red-200');
+                if(l === level) {
+                    const color = l==='easy'?'green':l==='medium'?'yellow':'red';
+                    btn.classList.add('ring-4', `ring-${color}-200`);
+                }
+            });
+        }
+
+        function adjustPlayers(change) {
+            playSound('click');
+            numPlayers += change;
+            if (numPlayers < 1) numPlayers = 1;
+            if (numPlayers > 4) numPlayers = 4;
+            
+            document.getElementById('player-count-display').innerText = numPlayers;
+            
+            const robotNotice = document.getElementById('robot-notice');
+            if(numPlayers === 1) {
+                robotNotice.classList.remove('hidden');
+            } else {
+                robotNotice.classList.add('hidden');
+            }
+            
+            updatePlayerInputs();
+        }
+
+        function updatePlayerInputs() {
+            const container = document.getElementById('player-inputs');
+            container.innerHTML = '';
+            
+            for (let i = 0; i < numPlayers; i++) {
+                const color = playerColors[i];
+                const defaultName = numPlayers === 1 ? 'Pemain 1' : `Pemain ${i + 1}`;
+                const html = `
+                    <div class="flex items-center gap-3 bg-white p-2 rounded-xl border border-gray-200 shadow-sm">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold" style="background-color: ${color.bg}">
+                            ${i + 1}
+                        </div>
+                        <input type="text" id="player-name-${i}" placeholder="Nama Pemain ${i + 1}" value="${defaultName}" 
+                               class="flex-1 p-2 border-b-2 border-gray-300 focus:outline-none focus:border-[${color.bg}] text-lg font-bold"
+                               style="color: ${color.bg}">
+                        <i class="fas fa-horse ${color.hex} text-2xl"></i>
+                    </div>
+                `;
+                container.innerHTML += html;
+            }
+        }
+
+        // --- STREAMING_CHUNK:Game Initialization ---
+
+        async function startGame() {
+            // Must initialize AudioContext on user gesture
+            if(Tone.context.state !== 'running') {
+                await Tone.start();
+                initAudio();
+            }
+            playSound('click');
+
+            // Gather Data
+            players = [];
+            for (let i = 0; i < numPlayers; i++) {
+                const nameInput = document.getElementById(`player-name-${i}`).value.trim();
+                players.push({
+                    id: i,
+                    name: nameInput || `Pemain ${i + 1}`,
+                    color: playerColors[i],
+                    position: 0, // 0 to 100 percentage
+                    score: 0,
+                    isRobot: false
+                });
+            }
+
+            hasRobot = false;
+            // Tambahkan AI "Robot Kuda" jika bermain sendiri
+            if (numPlayers === 1) {
+                hasRobot = true;
+                players.push({
+                    id: 1,
+                    name: "Robot Kuda 🤖",
+                    color: playerColors[1],
+                    position: 0,
+                    score: 0,
+                    isRobot: true
+                });
+            }
+
+            const className = document.getElementById('class-name').value.trim();
+            document.getElementById('display-class-name').innerText = className ? `Kelas: ${className}` : '';
+
+            // Calculate step size based on difficulty
+            // Leave a little margin at the end (finish line is at ~90%)
+            stepSize = 90 / currentStepsToWin; 
+
+            currentPlayerIndex = 0;
+            gameActive = true;
+
+            buildTrack();
+            updateTurnUI();
+
+            // Switch Screens
+            screens.setup.classList.add('hidden');
+            screens.game.classList.remove('hidden');
+            
+            checkAutoTurn();
+        }
+
+        function buildTrack() {
+            const trackContainer = document.getElementById('race-track');
+            // Keep finish line, remove old lanes
+            const finishLine = trackContainer.querySelector('.finish-line');
+            trackContainer.innerHTML = '';
+            trackContainer.appendChild(finishLine);
+
+            const laneHeight = 100 / numPlayers;
+
+            players.forEach(player => {
+                const lane = document.createElement('div');
+                lane.className = 'track-lane flex-1 w-full';
+                lane.id = `lane-${player.id}`;
+                
+                const horseWrapper = document.createElement('div');
+                horseWrapper.className = 'horse-wrapper';
+                horseWrapper.id = `horse-${player.id}`;
+                horseWrapper.style.left = '2%'; // start slightly in
+                
+                const horseIcon = document.createElement('i');
+                horseIcon.className = `fas fa-horse horse-icon`;
+                horseIcon.style.color = player.color.bg;
+                
+                const nameTag = document.createElement('div');
+                nameTag.className = 'horse-name-tag';
+                nameTag.innerText = player.name;
+                nameTag.style.color = player.color.bg;
+
+                horseWrapper.appendChild(horseIcon);
+                horseWrapper.appendChild(nameTag);
+                lane.appendChild(horseWrapper);
+                trackContainer.appendChild(lane);
+            });
+        }
+
+        function updateTurnUI() {
+            const currentPlayer = players[currentPlayerIndex];
+            const turnIndicator = document.getElementById('current-turn-indicator');
+            const turnName = document.getElementById('turn-player-name');
+            const rollBtn = document.getElementById('roll-dice-btn');
+            
+            turnName.innerText = currentPlayer.name;
+            turnIndicator.style.backgroundColor = currentPlayer.color.bg;
+            turnIndicator.style.color = currentPlayer.color.text;
+            turnIndicator.style.borderColor = 'white';
+
+            // Highlight active lane
+            document.querySelectorAll('.track-lane').forEach(lane => lane.classList.remove('active-player-highlight'));
+            document.getElementById(`lane-${currentPlayer.id}`).classList.add('active-player-highlight');
+
+            // Kondisi jika giliran Robot Kuda
+            if(currentPlayer.isRobot) {
+                rollBtn.disabled = true;
+                rollBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                rollBtn.innerHTML = '<i class="fas fa-cog fa-spin text-4xl"></i> ROBOT BERPIKIR...';
+            } else {
+                rollBtn.disabled = false;
+                rollBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                rollBtn.innerHTML = '<i class="fas fa-question-circle text-4xl"></i> AMBIL PERTANYAAN';
+            }
+        }
+
+        function checkAutoTurn() {
+            if(!gameActive) return;
+            const currentPlayer = players[currentPlayerIndex];
+            
+            if(currentPlayer.isRobot) {
+                setTimeout(() => {
+                    // Robot mengambil langkah setelah berpikir
+                    const isCorrect = Math.random() < 0.75; // 75% tingkat keberhasilan Robot
+                    
+                    if(isCorrect) {
+                        speak("Robot Kuda menjawab benar dan maju!");
+                        playSound('correct');
+                        moveHorse(currentPlayer);
+                    } else {
+                        speak("Yah, Robot Kuda salah, dia tidak bisa maju.");
+                        playSound('wrong');
+                        setTimeout(() => { nextTurn(); }, 2500);
+                    }
+                }, 3000);
+            }
+        }
+
+        function nextTurn() {
+            if (!gameActive) return;
+            currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+            updateTurnUI();
+            checkAutoTurn();
+        }
+
+        // --- STREAMING_CHUNK:Question Generation Logic ---
+
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function generateQuestion() {
+            let qType;
+            let maxNum;
+            let qData = { text: '', visuals: [], options: [], answer: 0 };
+
+            if (difficulty === 'easy') {
+                maxNum = 10;
+                // Types: 0: Count objects, 1: Number after, 2: Number before, 3: Number recognition
+                qType = getRandomInt(0, 3);
+            } else if (difficulty === 'medium') {
+                maxNum = 20;
+                // Types: 0: Count objects (up to 15), 1: Number after, 2: Number before, 3: Missing middle
+                qType = getRandomInt(0, 3);
+            } else {
+                maxNum = 50;
+                // Types: 1: Number after, 2: Number before, 3: Missing middle, 4: Compare (larger)
+                qType = getRandomInt(1, 4);
+                if(qType===3 && Math.random()>0.5) qType = 4; // bias towards larger numbers in hard
+            }
+
+            let num1, num2, num3;
+
+            switch (qType) {
+                case 0: // Count Objects (Apples, Stars, etc)
+                    num1 = getRandomInt(1, maxNum > 15 ? 15 : maxNum);
+                    qData.text = `Berapa jumlah gambar di bawah ini?`;
+                    qData.answer = num1;
+                    const emojis = ['🍎', '⭐', '🎈', '🚗', '🐶'];
+                    const emoji = emojis[getRandomInt(0, emojis.length - 1)];
+                    for(let i=0; i<num1; i++) qData.visuals.push(emoji);
+                    break;
+                
+                case 1: // Number After
+                    num1 = getRandomInt(1, maxNum - 1);
+                    qData.text = `Angka berapakah setelah ${num1}?`;
+                    qData.answer = num1 + 1;
+                    qData.visuals = [`${num1}`, `<i class="fas fa-arrow-right text-blue-500"></i>`, `?`];
+                    break;
+                
+                case 2: // Number Before
+                    num1 = getRandomInt(2, maxNum);
+                    qData.text = `Angka berapakah sebelum ${num1}?`;
+                    qData.answer = num1 - 1;
+                    qData.visuals = [`?`, `<i class="fas fa-arrow-right text-blue-500"></i>`, `${num1}`];
+                    break;
+
+                case 3: // Missing middle (Sequence)
+                    num1 = getRandomInt(1, maxNum - 2);
+                    qData.text = `Angka berapakah yang hilang?`;
+                    qData.answer = num1 + 1;
+                    qData.visuals = [`${num1}`, `,`, `?`, `,`, `${num1+2}`];
+                    break;
+                
+                case 4: // Compare (Which is larger/smaller)
+                    num1 = getRandomInt(1, maxNum);
+                    do { num2 = getRandomInt(1, maxNum); } while(num1 === num2);
+                    const askLarger = Math.random() > 0.5;
+                    qData.text = `Manakah angka yang lebih ${askLarger ? 'BESAR' : 'KECIL'}?`;
+                    qData.answer = askLarger ? Math.max(num1, num2) : Math.min(num1, num2);
+                    // For compare, options are exactly num1 and num2
+                    qData.options = [num1, num2];
+                    // visual
+                    qData.visuals = [`<span class="text-red-500 font-bold">${num1}</span>`, ` atau `, `<span class="text-blue-500 font-bold">${num2}</span>`];
+                    break;
+            }
+
+            // Generate options if not already generated (for compare)
+            if (qData.options.length === 0) {
+                let options = new Set([qData.answer]);
+                while(options.size < 4) {
+                    let wrongOpt = qData.answer + getRandomInt(-5, 5);
+                    if(wrongOpt > 0 && wrongOpt !== qData.answer) {
+                        options.add(wrongOpt);
+                    }
+                }
+                qData.options = Array.from(options);
+                // Shuffle options
+                qData.options.sort(() => Math.random() - 0.5);
+            }
+
+            return qData;
+        }
+
+        // --- STREAMING_CHUNK:Modal Interaction Logic ---
+
+        let currentCorrectAnswer = null;
+
+        function showQuestion() {
+            playSound('click');
+            const player = players[currentPlayerIndex];
+            const q = generateQuestion();
+            currentCorrectAnswer = q.answer;
+
+            // Setup Modal UI
+            const modal = modals.question;
+            const header = document.getElementById('question-player-color');
+            header.innerText = `Giliran: ${player.name}`;
+            header.style.backgroundColor = player.color.bg;
+
+            document.getElementById('question-text').innerHTML = q.text;
+            
+            // Text to speech (membuang tag html untuk dibaca)
+            speak(q.text.replace(/<[^>]*>?/gm, ''));
+            
+            const visContainer = document.getElementById('question-visuals');
+            visContainer.innerHTML = '';
+            q.visuals.forEach(v => {
+                const span = document.createElement('span');
+                span.innerHTML = v;
+                span.className = 'mx-1';
+                visContainer.appendChild(span);
+            });
+
+            const optContainer = document.getElementById('answer-options');
+            optContainer.innerHTML = '';
+            
+            // Grid layout adjustment based on number of options
+            if(q.options.length === 2) {
+                optContainer.className = "grid grid-cols-2 gap-6 w-full max-w-md";
+            } else {
+                 optContainer.className = "grid grid-cols-2 gap-4 w-full";
+            }
+
+            q.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = `py-4 bg-gray-100 hover:bg-gray-200 border-4 border-gray-300 rounded-2xl text-4xl font-bold text-gray-700 btn-custom transition-colors flex items-center justify-center`;
+                btn.innerText = opt;
+                btn.onclick = () => handleAnswer(opt, btn);
+                optContainer.appendChild(btn);
+            });
+
+            // Hide feedback
+            document.getElementById('feedback-container').classList.add('hidden');
+            
+            modal.classList.remove('hidden');
+        }
+
+        function handleAnswer(selected, btnElement) {
+            const isCorrect = parseInt(selected) === parseInt(currentCorrectAnswer);
+            const feedbackContainer = document.getElementById('feedback-container');
+            const feedbackIcon = document.getElementById('feedback-icon');
+            const feedbackText = document.getElementById('feedback-text');
+
+            // Disable all buttons to prevent double clicking
+            document.querySelectorAll('#answer-options button').forEach(b => b.disabled = true);
+
+            feedbackContainer.classList.remove('hidden');
+
+            if (isCorrect) {
+                playSound('correct');
+                speak('Hebat! Jawaban benar!');
+                btnElement.classList.replace('bg-gray-100', 'bg-green-400');
+                btnElement.classList.replace('border-gray-300', 'border-green-500');
+                btnElement.classList.replace('text-gray-700', 'text-white');
+                
+                feedbackIcon.innerHTML = '✅';
+                feedbackIcon.className = 'text-8xl mb-4 text-green-500 bounce-in';
+                feedbackText.innerText = 'HEBAT! Jawaban Benar';
+                feedbackText.className = 'text-4xl brand-font text-green-600';
+                
+                setTimeout(() => {
+                    modals.question.classList.add('hidden');
+                    moveHorse(players[currentPlayerIndex]);
+                }, 1500);
+
+            } else {
+                playSound('wrong');
+                speak('Yah, kurang tepat. Semangat!');
+                btnElement.classList.replace('bg-gray-100', 'bg-red-400');
+                btnElement.classList.replace('border-gray-300', 'border-red-500');
+                btnElement.classList.replace('text-gray-700', 'text-white');
+
+                // Highlight correct answer slightly
+                document.querySelectorAll('#answer-options button').forEach(b => {
+                    if(parseInt(b.innerText) === currentCorrectAnswer) {
+                        b.classList.add('border-green-400', 'border-4');
+                    }
+                });
+
+                feedbackIcon.innerHTML = '❌';
+                feedbackIcon.className = 'text-8xl mb-4 text-red-500 bounce-in';
+                feedbackText.innerText = 'Yah, Kurang Tepat.';
+                feedbackText.className = 'text-4xl brand-font text-red-600';
+
+                setTimeout(() => {
+                    modals.question.classList.add('hidden');
+                    nextTurn();
+                }, 2000);
+            }
+        }
+
+        // --- STREAMING_CHUNK:Horse Movement and Win Logic ---
+
+        function moveHorse(player) {
+            player.score++;
+            player.position += stepSize;
+            
+            const horseWrapper = document.getElementById(`horse-${player.id}`);
+            
+            // Start gallop animation & sound
+            horseWrapper.classList.add('galloping');
+            
+            let gallopCount = 0;
+            const gallopInterval = setInterval(() => {
+                playSound('gallop');
+                gallopCount++;
+                if(gallopCount > 3) clearInterval(gallopInterval);
+            }, 150);
+
+            // Update DOM position
+            // Cap visual at ~90% to align with finish line
+            const visualPos = Math.min(player.position, 92); 
+            
+            // Calculate base offset (2%) + progress
+            horseWrapper.style.left = `calc(2% + ${visualPos}%)`;
+
+            // Wait for transition to finish before checking win or passing turn
+            setTimeout(() => {
+                horseWrapper.classList.remove('galloping');
+                
+                if (player.score >= currentStepsToWin) {
+                    handleWin(player);
+                } else {
+                    nextTurn();
+                }
+            }, 500); // 500ms matches the CSS transition time
+        }
+
+        function handleWin(player) {
+            gameActive = false;
+            playSound('win');
+            
+            const winnerModal = modals.winner;
+            document.getElementById('winner-name').innerText = player.name;
+            document.getElementById('winner-name').style.color = player.color.bg;
+            
+            winnerModal.classList.remove('hidden');
+            createConfetti();
+        }
+
+        function createConfetti() {
+            const container = document.getElementById('confetti-container');
+            container.innerHTML = '';
+            const colors = ['#fce18a', '#ff726d', '#b48def', '#f4306d', '#42a5f5', '#66bb6a'];
+            
+            for (let i = 0; i < 100; i++) {
+                const conf = document.createElement('div');
+                conf.style.position = 'absolute';
+                conf.style.width = `${Math.random() * 10 + 5}px`;
+                conf.style.height = `${Math.random() * 10 + 5}px`;
+                conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                conf.style.left = `${Math.random() * 100}%`;
+                conf.style.top = `-10%`;
+                conf.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+                
+                // Animation
+                const duration = Math.random() * 3 + 2;
+                const delay = Math.random() * 2;
+                
+                conf.animate([
+                    { transform: `translate3d(0,0,0) rotate(0deg)`, opacity: 1 },
+                    { transform: `translate3d(${Math.random()*200 - 100}px, 100vh, 0) rotate(${Math.random()*720}deg)`, opacity: 0 }
+                ], {
+                    duration: duration * 1000,
+                    delay: delay * 1000,
+                    iterations: Infinity
+                });
+                
+                container.appendChild(conf);
+            }
+        }
+
+        // --- STREAMING_CHUNK:Navigation Logic ---
+
+        function resetGame() {
+            playSound('click');
+            modals.winner.classList.add('hidden');
+            document.getElementById('confetti-container').innerHTML = '';
+            
+            // Reset player states
+            players.forEach(p => {
+                p.position = 0;
+                p.score = 0;
+                const horse = document.getElementById(`horse-${p.id}`);
+                horse.style.left = '2%';
+            });
+            
+            currentPlayerIndex = 0;
+            gameActive = true;
+            updateTurnUI();
+            checkAutoTurn();
+        }
+
+        function returnToSetup() {
+            playSound('click');
+            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+            gameActive = false;
+            modals.winner.classList.add('hidden');
+            screens.game.classList.add('hidden');
+            screens.login.classList.remove('hidden'); // Kembali ke login awal
+            document.getElementById('confetti-container').innerHTML = '';
+        }
+
+        // Initialize on load
+        window.onload = initSetup;
+
+    </script>
+</body>
+</html>
